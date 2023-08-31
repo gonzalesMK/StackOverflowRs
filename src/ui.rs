@@ -49,20 +49,26 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
 
     frame.render_widget(
         Paragraph::new(
-            "This is a tui template.\n\
+            "'k' - up\n\
+             'j' - down\n\
+             'r' - refresh (min 5min)\n\
+             'n' - next page\n\
+             'p' - previous page\n\
+             'o' - open in browser\n\
+             ' ' - toggle body\n\
                 Press `Esc`, `Ctrl-C` or `q` to stop running.\n\
                 Press left and right to increment and decrement the counter respectively.\n\
                 ",
         )
         .block(
             Block::default()
-                .title("Template")
+                .title("Shortcuts")
                 .title_alignment(Alignment::Center)
                 .borders(Borders::ALL)
                 .border_type(BorderType::Rounded),
         )
         .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-        .alignment(Alignment::Center),
+        .alignment(Alignment::Left),
         chunks[0],
     );
 

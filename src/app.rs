@@ -128,7 +128,9 @@ impl Default for App {
 impl App {
     /// Constructs a new instance of [`App`].
     pub fn new() -> Self {
-        Self::default()
+        let mut default = Self::default();
+        default.refresh_unanswered_questions();
+        default
     }
 
     /// Handles the tick event of the terminal.
