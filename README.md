@@ -11,4 +11,5 @@ Problem to solve: Make it easier to check for unanswered questions on Stack Over
 - [ ] Use API_KEY or enable user to log in
 - [ ] Improve parsing of the text 
 - [ ] Solve bug of big text not showing up
+- [ ] Create CLI 
 
