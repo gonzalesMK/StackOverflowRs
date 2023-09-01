@@ -4,7 +4,7 @@ use std::io;
 use StackOverflowRs::app::{App, AppResult};
 use StackOverflowRs::event::{Event, EventHandler};
 use StackOverflowRs::handler::handle_key_events;
-use StackOverflowRs::stack;
+
 use StackOverflowRs::tui::Tui;
 
 fn main() -> AppResult<()> {

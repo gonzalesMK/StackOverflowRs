@@ -8,7 +8,7 @@ use crate::stack::{self, from_html};
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Question {
     pub title: String,
     pub link: String,
@@ -67,16 +67,21 @@ impl<T> StatefulList<T> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum CurrentApp {
+    UnansweredQuestionsView,
+    QuestionDetailView,
+}
+
 /// Application.
 #[derive(Debug)]
 pub struct App {
     /// Is the application running?
     pub running: bool,
-    pub questions: StatefulList<Question>,
-    pub question_page: u8,
+    pub unanswered_questions_view: UnansweredQuestionsView,
+    pub question_reader_view: QuestionReaderView,
     stack_overflow_client: stack::StackOverflowClient,
-    pub vertical_scroll_state: ScrollbarState,
-    pub vertical_scroll_position: usize,
+    pub current_app: CurrentApp,
 }
 
 impl Default for App {
@@ -84,11 +89,12 @@ impl Default for App {
         let mut vertical_scroll_state = ScrollbarState::default();
         vertical_scroll_state = vertical_scroll_state.content_length(2);
         vertical_scroll_state = vertical_scroll_state.viewport_content_length(1);
+        let client = stack::StackOverflowClient::default();
 
         Self {
             running: true,
             // Create default value for questions
-            question_page: 1,
+            unanswered_questions_view: UnansweredQuestionsView {            question_page: 1,
             questions: StatefulList::with_items(vec![
                 Question {
                     title: "How to do X?".to_string(),
@@ -118,9 +124,14 @@ impl Default for App {
                     show_body: false,
                 },
             ]),
-            stack_overflow_client: stack::StackOverflowClient::default(),
             vertical_scroll_state,
-            vertical_scroll_position: 1,
+            stack_overflow_client: stack::StackOverflowClient::default(),
+            },
+            question_reader_view: QuestionReaderView { question: None, vertical_scroll_state: 0, parent: CurrentApp::UnansweredQuestionsView },
+
+            
+            stack_overflow_client: client,
+            current_app: CurrentApp::UnansweredQuestionsView,
         }
     }
 }
@@ -129,7 +140,7 @@ impl App {
     /// Constructs a new instance of [`App`].
     pub fn new() -> Self {
         let mut default = Self::default();
-        default.refresh_unanswered_questions();
+        default.unanswered_questions_view.refresh_unanswered_questions();
         default
     }
 
@@ -140,17 +151,31 @@ impl App {
     pub fn quit(&mut self) {
         self.running = false;
     }
+}
 
+#[derive(Debug)]
+pub struct UnansweredQuestionsView {
+    pub questions: StatefulList<Question>,
+    pub question_page: u8,
+    pub vertical_scroll_state: ScrollbarState,
+    stack_overflow_client: stack::StackOverflowClient,
+}
+
+#[derive(Debug)]
+pub struct QuestionReaderView {
+    pub question: Option<Question>,
+    pub vertical_scroll_state: u16,
+    pub parent: CurrentApp,
+}
+
+impl UnansweredQuestionsView {
     pub fn refresh_unanswered_questions(&mut self) {
         let questions = self
             .stack_overflow_client
             .get_unanswered_questions(self.question_page)
             .expect("Failed to get unanswered questions");
-
         self.questions = StatefulList::with_items(questions);
-
         self.vertical_scroll_state.first();
-
         self.vertical_scroll_state = self
             .vertical_scroll_state
             .content_length((self.questions.items.len() - 1) as u16);
@@ -158,7 +183,6 @@ impl App {
 
     pub fn next_question_page(&mut self) {
         self.question_page += 1;
-
         self.refresh_unanswered_questions();
     }
 
@@ -185,14 +209,39 @@ impl App {
 
     pub fn open_selected_question(&mut self) {
         let question = &self.questions.items[self.questions.state.selected().unwrap() as usize];
-
         if let Err(e) = webbrowser::open(question.link.as_str()) {
             eprintln!("Failed to open link: {}", e);
         }
     }
 
-    pub fn toogle_question_body(&mut self) {
-        let question = &mut self.questions.items[self.questions.state.selected().unwrap() as usize];
-        question.show_body = !question.show_body;
+    pub fn get_selected_question(&self) -> Question {
+        self.questions.items[self.questions.state.selected().unwrap() as usize].clone()
+    }
+}
+
+impl QuestionReaderView {
+
+    pub fn set_question(&mut self, question: Question, parent: CurrentApp) {
+        self.parent = parent;
+        self.question = Some(question);
+        self.vertical_scroll_state = 0;
+    }
+
+    pub fn get_parent(&self) -> CurrentApp {
+        self.parent
+    }
+
+    pub fn next_line(&mut self) {
+        self.vertical_scroll_state = self.vertical_scroll_state.saturating_add(1);
+    }
+
+    pub fn previous_line(&mut self) {
+ self.vertical_scroll_state=       self.vertical_scroll_state.saturating_sub(1);
+    }
+
+    pub fn open_question(&mut self) {
+        if let Err(e) = webbrowser::open(self.question.as_ref().unwrap().link.as_str()) {
+            eprintln!("Failed to open link: {}", e);
+        }
     }
 }

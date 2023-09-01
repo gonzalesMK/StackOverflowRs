@@ -20,7 +20,7 @@ struct QuestionDTO {
 }
 
 pub fn from_html(html: &str) -> String {
-    from_read(html.as_bytes(), 60)
+    from_read(html.as_bytes(), 10000)
 }
 
 impl From<QuestionDTO> for Question {
@@ -32,7 +32,7 @@ impl From<QuestionDTO> for Question {
             tags: dto.tags,
             answer_count: dto.answer_count,
             body: body.clone(),
-            description: body.lines().take(3).collect::<Vec<_>>().join(". "),
+            description: body.lines().take(3).collect::<Vec<_>>().join(" "),
             show_body: false,
         }
     }
@@ -153,7 +153,7 @@ impl StackOverflowClient {
         Ok(content)
     }
 
-    fn make_request(&mut self, url: &str) -> Result<String, reqwest::Error> {
+    fn make_request(&self, url: &str) -> Result<String, reqwest::Error> {
         let response = self.client.get(url).send()?;
         Ok(response.text()?)
     }

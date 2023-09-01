@@ -7,11 +7,12 @@ use ratatui::{
     text::{Line, Span},
     widgets::{
         Block, BorderType, Borders, List, ListItem, Paragraph, Scrollbar, ScrollbarOrientation,
+        Wrap,
     },
     Frame,
 };
 
-use crate::app::{App, Question};
+use crate::app::{App, CurrentApp, Question, QuestionReaderView, UnansweredQuestionsView};
 
 fn render_question(question: &Question, size: usize) -> ListItem {
     // format  title, description and link
@@ -43,6 +44,20 @@ fn render_question(question: &Question, size: usize) -> ListItem {
 }
 /// Renders the user interface widgets.
 pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
+    match app.current_app {
+        CurrentApp::QuestionDetailView => {
+            render_question_detail_view(&mut app.question_reader_view, frame)
+        }
+        CurrentApp::UnansweredQuestionsView => {
+            render_unanswered_questions(&mut app.unanswered_questions_view, frame)
+        }
+    }
+}
+
+pub fn render_unanswered_questions<B: Backend>(
+    app: &mut UnansweredQuestionsView,
+    frame: &mut Frame<'_, B>,
+) {
     let chunks = Layout::default()
         .constraints([Constraint::Length(9), Constraint::Min(8)].as_ref())
         .split(frame.size());
@@ -105,4 +120,52 @@ pub fn render<B: Backend>(app: &mut App, frame: &mut Frame<'_, B>) {
         chunks[1],
         &mut app.vertical_scroll_state,
     )
+}
+
+pub fn render_question_detail_view<B: Backend>(
+    app: &mut QuestionReaderView,
+    frame: &mut Frame<'_, B>,
+) {
+    let chunks = Layout::default()
+        .constraints([Constraint::Length(9), Constraint::Min(8)].as_ref())
+        .split(frame.size());
+
+    frame.render_widget(
+        Paragraph::new(
+            "'k' - up\n\
+             'j' - down\n\
+             'o' - open in browser\n\
+             ' ' - go to previous page\n\
+                Press `Esc`, `Ctrl-C` or `q` to stop running.\n\
+                Press left and right to increment and decrement the counter respectively.\n\
+                ",
+        )
+        .block(
+            Block::default()
+                .title("Shortcuts")
+                .title_alignment(Alignment::Center)
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
+        .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+        .alignment(Alignment::Left),
+        chunks[0],
+    );
+
+    let paragraph = Paragraph::new(app.question.as_ref().unwrap().body.as_str())
+        .style(Style::default().fg(Color::Gray))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(Style::default().fg(Color::Gray))
+                .title(Span::styled(
+                    "Question",
+                    Style::default().add_modifier(Modifier::BOLD),
+                )),
+        )
+        .alignment(Alignment::Left)
+        .wrap(Wrap { trim: true })
+        .scroll((app.vertical_scroll_state, 0));
+
+    frame.render_widget(paragraph, chunks[1]);
 }
